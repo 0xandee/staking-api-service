@@ -1,25 +1,29 @@
 {
-    "versions": [
-        {
-            "version": 0,
-            "activation_height": 192840,
-            "staking_cap": 50000000000,
-            "tag": "01020304",
-            "covenant_pks": [
-                "0381b70c01535f5153a8039c21150c53f3e49a083555b57930103db8a7272ff336",
-                "02159f46467124f6bbba77060520571ddb07c7e95ff54d8b9958ec0b0d59d86c03",
-                "039705be04f3a3eb5c3d0dd61e648e06ea8170975744594fe702e8088bcceff375",
-                "02ce138027bfdfb4dd631e9cecf097082c8a505ab16de36f5e3eb816d105ba7575",
-                "03e15dba250612e79e22abf28a1828ba5e6bdfaaa6ed2d87462b046994c33fa46f"
-            ],
-            "covenant_quorum": 3,
-            "unbonding_time": 1000,
-            "unbonding_fee": 20000,
-            "max_staking_amount": 1000000000,
-            "min_staking_amount": 1000000,
-            "max_staking_time": 84000,
-            "min_staking_time": 64000,
-            "confirmation_depth": 10
-        }
-    ]
+	"versions": [
+		{
+			"version": 0,
+			"activation_height": 197535,
+			"staking_cap": 500000000,
+			"tag": "6f6d6761",
+			"covenant_pks": [
+				"02671a988e255508157d55fa951b1f0b36b524a65cc738095e4ea58111536f7054",
+				"0342fb494993aba1d158339209140f245a4cfd19378195cd4cc0146e90c9cfbcc1",
+				"036580160fb318969a00d1b9e7a472eff4f588efa30e034d45b0500067ce0164d8",
+				"026bdcfaf8ce8ac81644f9053d5a3bc6aec1439020d9c7315a3fd0994575113628",
+				"029e9b44f2b158f7b9b22cfab826f3c1d041b29b7a39368fdc654da06983665c5b",
+				"03470aadcd9df1b035f03e32a1d7dc257c433d5ea503e2e1f4f541984f89299341",
+				"02351ae3aabb1e3e6a6a32f15eedf1b8456bb0ebe3797382b5f39ce42ab528077f",
+				"03d843d8c03a97bc9e71e7cd2d0b4e3e303a91ae5f35658b5e799bcb8755d8edba",
+				"03fcd92b5aec5d410ace5d6e1401a8b695de17d4bfc8b1e11c1d094a3bf8ceacd7"
+			],
+			"covenant_quorum": 6,
+			"unbonding_time": 1,
+			"unbonding_fee": 2000,
+			"max_staking_amount": 5000000,
+			"min_staking_amount": 500,
+			"max_staking_time": 10,
+			"min_staking_time": 10,
+			"confirmation_depth": 2
+		}
+	]
 }

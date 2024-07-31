@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/babylonchain/staking-api-service/internal/db"
@@ -10,6 +11,13 @@ import (
 	"github.com/babylonchain/staking-api-service/internal/utils"
 	"github.com/rs/zerolog/log"
 )
+
+type BloomMintingTransaction struct {
+	IsMinted        bool   `bson:"is_minted"`
+	MintingTx       string `bson:"minting_tx"`
+	MintedAmount    uint64 `bson:"minted_amount"`
+	ReceiverAddress string `bson:"receiver_address"`
+}
 
 type TransactionPublic struct {
 	TxHex          string `json:"tx_hex"`
@@ -20,17 +28,19 @@ type TransactionPublic struct {
 }
 
 type DelegationPublic struct {
-	StakingTxHashHex      string             `json:"staking_tx_hash_hex"`
-	StakerPkHex           string             `json:"staker_pk_hex"`
-	FinalityProviderPkHex string             `json:"finality_provider_pk_hex"`
-	State                 string             `json:"state"`
-	StakingValue          uint64             `json:"staking_value"`
-	StakingTx             *TransactionPublic `json:"staking_tx"`
-	UnbondingTx           *TransactionPublic `json:"unbonding_tx,omitempty"`
-	IsOverflow            bool               `json:"is_overflow"`
+	StakingTxHashHex      string                   `json:"staking_tx_hash_hex"`
+	StakerPkHex           string                   `json:"staker_pk_hex"`
+	FinalityProviderPkHex string                   `json:"finality_provider_pk_hex"`
+	State                 string                   `json:"state"`
+	StakingValue          uint64                   `json:"staking_value"`
+	StakingTx             *TransactionPublic       `json:"staking_tx"`
+	UnbondingTx           *TransactionPublic       `json:"unbonding_tx,omitempty"`
+	IsOverflow            bool                     `json:"is_overflow"`
+	BloomMintingTx        *BloomMintingTransaction `json:"bloom_minting_tx,omitempty"`
 }
 
 func fromDelegationDocument(d model.DelegationDocument) DelegationPublic {
+	fmt.Printf("d %#v\n", d)
 	delPublic := DelegationPublic{
 		StakingTxHashHex:      d.StakingTxHashHex,
 		StakerPkHex:           d.StakerPkHex,
@@ -45,6 +55,16 @@ func fromDelegationDocument(d model.DelegationDocument) DelegationPublic {
 			TimeLock:       d.StakingTx.TimeLock,
 		},
 		IsOverflow: d.IsOverflow,
+	}
+
+	// Add Bloom Minting transaction if it exists
+	if d.BloomMintingTx != nil && d.BloomMintingTx.MintingTx != "" {
+		delPublic.BloomMintingTx = &BloomMintingTransaction{
+			IsMinted:        d.BloomMintingTx.IsMinted,
+			MintingTx:       d.BloomMintingTx.MintingTx,
+			MintedAmount:    d.BloomMintingTx.MintedAmount,
+			ReceiverAddress: d.BloomMintingTx.ReceiverAddress,
+		}
 	}
 
 	// Add unbonding transaction if it exists
@@ -74,6 +94,7 @@ func (s *Services) DelegationsByStakerPk(ctx context.Context, stakerPk string, p
 	for _, d := range resultMap.Data {
 		delegations = append(delegations, fromDelegationDocument(d))
 	}
+	fmt.Printf("delegations %#v\n", delegations)
 	return delegations, resultMap.PaginationToken, nil
 }
 

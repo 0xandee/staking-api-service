@@ -4,6 +4,13 @@ import (
 	"github.com/babylonchain/staking-api-service/internal/types"
 )
 
+type BloomMintingTransaction struct {
+	IsMinted        bool   `bson:"is_minted"`
+	MintingTx       string `bson:"minting_tx"`
+	MintedAmount    uint64 `bson:"minted_amount"`
+	ReceiverAddress string `bson:"receiver_address"`
+}
+
 type TimelockTransaction struct {
 	TxHex          string `bson:"tx_hex"`
 	OutputIndex    uint64 `bson:"output_index"`
@@ -18,15 +25,16 @@ type StakerBtcAddress struct {
 }
 
 type DelegationDocument struct {
-	StakingTxHashHex      string                `bson:"_id"` // Primary key
-	StakerPkHex           string                `bson:"staker_pk_hex"`
-	FinalityProviderPkHex string                `bson:"finality_provider_pk_hex"`
-	StakingValue          uint64                `bson:"staking_value"`
-	State                 types.DelegationState `bson:"state"`
-	StakingTx             *TimelockTransaction  `bson:"staking_tx"` // Always exist
-	UnbondingTx           *TimelockTransaction  `bson:"unbonding_tx,omitempty"`
-	IsOverflow            bool                  `bson:"is_overflow"`
-	StakerBtcAddress      *StakerBtcAddress     `bson:"staker_btc_address,omitempty"`
+	StakingTxHashHex      string                   `bson:"_id"` // Primary key
+	StakerPkHex           string                   `bson:"staker_pk_hex"`
+	FinalityProviderPkHex string                   `bson:"finality_provider_pk_hex"`
+	StakingValue          uint64                   `bson:"staking_value"`
+	State                 types.DelegationState    `bson:"state"`
+	StakingTx             *TimelockTransaction     `bson:"staking_tx"` // Always exist
+	UnbondingTx           *TimelockTransaction     `bson:"unbonding_tx,omitempty"`
+	IsOverflow            bool                     `bson:"is_overflow"`
+	StakerBtcAddress      *StakerBtcAddress        `bson:"staker_btc_address,omitempty"`
+	BloomMintingTx        *BloomMintingTransaction `bson:"bloom_minting_tx"`
 }
 
 type DelegationByStakerPagination struct {

@@ -1,0 +1,126 @@
+package handlers
+
+import (
+	"context"
+	"crypto/ecdsa"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"math/big"
+
+	"github.com/babylonchain/staking-api-service/internal/types"
+	queueClient "github.com/babylonchain/staking-queue-client/client"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/ethclient"
+    ethTypes "github.com/ethereum/go-ethereum/core/types" // Aliased import
+	"github.com/rs/zerolog/log"
+)
+
+// ActiveStakingHandler handles the active staking event
+// This handler is designed to be idempotent, capable of handling duplicate messages gracefully.
+// It can also resume from the next step if a previous step fails, ensuring robustness in the event processing workflow.
+func (h *QueueHandler) ActiveStakingHandler(ctx context.Context, messageBody string) *types.Error {
+	// Parse the message body into ActiveStakingEvent
+	var activeStakingEvent queueClient.ActiveStakingEvent
+	err := json.Unmarshal([]byte(messageBody), &activeStakingEvent)
+	if err != nil {
+		log.Ctx(ctx).Error().Err(err).Msg("Failed to unmarshal the message body into ActiveStakingEvent")
+		return types.NewError(http.StatusBadRequest, types.BadRequest, err)
+	}
+
+	// Check if delegation already exists
+	exist, delError := h.Services.IsDelegationPresent(ctx, activeStakingEvent.StakingTxHashHex)
+	if delError != nil {
+		return delError
+	}
+	if exist {
+		// Ignore the message as the delegation already exists. This is a duplicate message
+		log.Ctx(ctx).Debug().Str("StakingTxHashHex", activeStakingEvent.StakingTxHashHex).
+			Msg("delegation already exists")
+		return nil
+	}
+
+	// We only emit the stats event for the active staking if it is not an overflow event
+	if !activeStakingEvent.IsOverflow {
+		// Perform the async stats calculation by emit the stats event
+		statsError := h.EmitStatsEvent(ctx, queueClient.NewStatsEvent(
+			activeStakingEvent.StakingTxHashHex,
+			activeStakingEvent.StakerPkHex,
+			activeStakingEvent.FinalityProviderPkHex,
+			activeStakingEvent.StakingValue,
+			types.Active.ToString(),
+		))
+		if statsError != nil {
+			log.Ctx(ctx).Error().Err(statsError).Msg("Failed to emit stats event for active staking")
+			return statsError
+		}
+	}
+
+	// Perform the async timelock expire check
+	expireCheckError := h.Services.ProcessExpireCheck(
+		ctx, activeStakingEvent.StakingTxHashHex,
+		activeStakingEvent.StakingStartHeight,
+		activeStakingEvent.StakingTimeLock,
+		types.ActiveTxType,
+	)
+	if expireCheckError != nil {
+		return expireCheckError
+	}
+
+	// Initialize the Ethereum client
+	endpoint := "https://sepolia.infura.io/v3/6c1bb624fe9945dfb18cc9a890d2faf8"
+	client, err := ethclient.Dial(endpoint) 
+
+	// Get the latest block number
+	blockNumber, err := client.BlockNumber(context.Background()) 
+	fmt.Println("Latest Block Number:", blockNumber)
+
+	// Get the staking value
+	fmt.Println("StakingValue:", activeStakingEvent.StakingValue)
+
+	// Get the wallet balance
+	address := common.HexToAddress("0xAdea33469fCa95164Be08aaD4DfF7FD457cd0D4d")
+	balance, err := client.BalanceAt(context.Background(), address, nil) 
+	fmt.Println("Wallet Balance:", balance)
+
+	// Get the sender's private key
+	privateKey, err := crypto.HexToECDSA("446c00d6e0ad5763497808e15ba7333ded39f38ced66facac9639aee7a1caeeb") 
+	publicKey := privateKey.Public() 
+	publicKeyECDSA := publicKey.(*ecdsa.PublicKey) 
+
+	// Get the sender's address
+	fromAddress := crypto.PubkeyToAddress(*publicKeyECDSA) 
+	toAddress := common.HexToAddress("0xeffB943a01dDeC6bA3C94B7A3e65600AB3255d0A") 
+
+	value := big.NewInt(100000000000000) // 0,0001 ETH in Wei 
+	gasLimit := uint64(21000) 
+	gasPrice := big.NewInt(30000000000) // 30 Gwei 
+	nonce, err := client.PendingNonceAt(context.Background(), fromAddress) 
+
+	tx := ethTypes.NewTransaction(nonce, toAddress, value, gasLimit, gasPrice, nil) 
+	fmt.Printf("tx: ", tx)
+
+	//Sing the transaction 
+	signedTx, err := ethTypes.SignTx(tx, ethTypes.NewEIP155Signer(big.NewInt(11155111)), privateKey) 
+
+	//Send it to the ethereum network 
+	err = client.SendTransaction(context.Background(), signedTx) 
+
+
+
+	// Save the active staking delegation. This is the final step in the active staking event processing
+	// Please refer to the README.md for the details on the active staking event processing workflow
+	saveErr := h.Services.SaveActiveStakingDelegation(
+		ctx, activeStakingEvent.StakingTxHashHex, activeStakingEvent.StakerPkHex,
+		activeStakingEvent.FinalityProviderPkHex, activeStakingEvent.StakingValue,
+		activeStakingEvent.StakingStartHeight, activeStakingEvent.StakingStartTimestamp,
+		activeStakingEvent.StakingTimeLock, activeStakingEvent.StakingOutputIndex,
+		activeStakingEvent.StakingTxHex, activeStakingEvent.IsOverflow,
+	)
+	if saveErr != nil {
+		return saveErr
+	}
+
+	return nil
+}
