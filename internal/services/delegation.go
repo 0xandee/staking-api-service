@@ -13,10 +13,10 @@ import (
 )
 
 type BloomMintingTransaction struct {
-	IsMinted        bool   `bson:"is_minted"`
-	MintingTx       string `bson:"minting_tx"`
-	MintedAmount    uint64 `bson:"minted_amount"`
-	ReceiverAddress string `bson:"receiver_address"`
+	IsMinted        bool   `json:"is_minted"`
+	MintingTx       string `json:"minting_tx"`
+	MintedAmount    uint64 `json:"minted_amount"`
+	ReceiverAddress string `json:"receiver_address"`
 }
 
 type TransactionPublic struct {
